@@ -1,0 +1,32 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1430"><title>Кофейная гуща · небо</title>
+<link rel="preload" href="/assets/cormorant-garamond.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:Cormorant;src:url(/assets/cormorant-garamond.woff2) format('woff2');font-weight:300 700;font-display:swap}
+:root{color-scheme:dark;--deep:#0b1430;--sand:#e8d2aa;--gold:#f0d79a;--muted:#7d88ab}
+*{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--deep);color:var(--sand);
+  font:400 12px/1.4 -apple-system,'SF Pro Text',Arial,sans-serif;
+  background-image:
+    radial-gradient(126% 80% at 50% 4%,#1c2a58 0%,#16204a 36%,#0d1533 68%,#080d22 100%),
+    radial-gradient(92% 34% at 50% 104%,rgba(196,140,64,.24) 0%,rgba(122,80,42,.09) 44%,rgba(10,17,40,0) 74%);
+  background-blend-mode:normal,screen}
+#sand{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:1}
+#hud{position:fixed;top:max(6px,env(safe-area-inset-top));left:10px;z-index:9;color:var(--muted);
+  font-variant-numeric:tabular-nums;letter-spacing:.06em;opacity:.55;pointer-events:none;margin:0}
+#hud b{color:var(--gold);font-weight:400}
+</style></head><body>
+<canvas id="sand"></canvas>
+<div id="root"></div>
+<p id="hud"><b id="fps">—</b> fps · <span id="freeN">—</span> свободно</p>
+<script type="module">
+import { harness } from '/gusha/test-harness.js';
+
+import * as phone from '/gusha/screens/phone.js';
+import * as code from '/gusha/screens/code.js';
+import * as sky from '/gusha/screens/sky.js';
+window.phone = phone; window.code = code; window.sky = sky;
+harness({ phone, code, sky }, 'sky');
+</script>
+</body></html>

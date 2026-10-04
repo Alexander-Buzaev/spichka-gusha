@@ -1,0 +1,15 @@
+{
+  "name": "spichka-gusha",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mobile coffee reading prototype rendered with sand particles",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "python3 -m http.server 5173 --directory dist",
+    "build": "node scripts/check-build.mjs",
+    "test": "node scripts/gusha-full-flow.mjs output/playwright/full-flow",
+    "test:regression": "node scripts/gusha-e2e.mjs output/playwright/regression"
+  },
+  "devDependencies": { "playwright": "1.62.1" }
+}

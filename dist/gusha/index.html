@@ -1,0 +1,94 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1430">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Кофейная гуща</title>
+<link rel="preload" href="/assets/cormorant-garamond.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="modulepreload" href="/gusha/sand.js">
+<link rel="modulepreload" href="/gusha/app.js">
+<style>
+/* Шрифт местный: lining/tabular цифры запечены в cmap специально для Canvas,
+   обычный файл Google Fonts сюда подставлять нельзя. */
+@font-face{font-family:Cormorant;src:url(/assets/cormorant-garamond.woff2) format('woff2');
+  font-weight:300 700;font-display:swap}
+
+:root{color-scheme:dark;--deep:#0b1430;--mid:#1a2550;--sand:#e8d2aa;--gold:#f0d79a;--muted:#7d88ab}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+body{
+  background:var(--deep);color:var(--sand);
+  font:400 13px/1.4 -apple-system,'SF Pro Text',Arial,sans-serif;
+  /* Фон — то же ночное небо, что в /sky.html: глубокий синий с тёплым свечением снизу.
+     Золотые разводы по нему ведёт уже песок (sand.setFlow('sky')). */
+  background-image:
+    radial-gradient(128% 82% at 50% 6%,#1c2a58 0%,#141d44 38%,#0c1330 68%,#080d22 100%),
+    radial-gradient(92% 34% at 50% 103%,rgba(196,140,64,.26) 0%,rgba(122,80,42,.10) 42%,rgba(10,17,40,0) 72%);
+  background-blend-mode:normal,screen;
+  -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;user-select:none;
+}
+
+/* Один холст песка на весь поток: экраны его не пересоздают, только двигают цели. */
+#sand{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:1}
+
+/* Контейнер экранов. Свой root каждому экрану кладёт app.js: экраны 5–7 вешают на него
+   класс .groot (fixed/inset:0/z-index:3/pointer-events:none), hello и lens создают внутри
+   собственный слой, чашке app.js включает pointer-events. */
+#screens{position:fixed;inset:0;z-index:3;pointer-events:none}
+.gscreen{position:fixed;inset:0;z-index:3;pointer-events:none}
+
+/* Заставка до первого кадра: без неё на медленной сети видна голая синяя заливка. */
+#boot{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;
+  font:400 21px/1.3 Cormorant,Georgia,serif;letter-spacing:.18em;color:var(--muted);
+  opacity:.9;transition:opacity .5s linear;pointer-events:none;text-align:center;padding:0 24px}
+#boot.off{opacity:0}
+#boot b{font-weight:400;color:var(--gold)}
+#boot-particles{display:block;width:144px;height:144px}
+
+@media (prefers-reduced-motion:reduce){#boot{transition:none}}
+</style></head><body>
+<canvas id="sand"></canvas>
+<div id="screens"></div>
+<div id="boot" role="status" aria-label="Загружается кофейная гуща">
+  <canvas id="boot-particles" width="144" height="144" aria-hidden="true"></canvas>
+  <b>Кофейная гуща</b>
+</div>
+<noscript><p style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  font:400 18px/1.4 Cormorant,serif;color:#e8d2aa;padding:0 28px;text-align:center">
+  Для этой пробы нужен включённый JavaScript.</p></noscript>
+<script>
+// Только 120 точек и 30 кадров/с: заставка не соревнуется с основным WebGL.
+(() => {
+  const canvas = document.getElementById('boot-particles');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const dots = Array.from({ length: 120 }, (_, i) => ({
+    a: i * 2.39996323, r: 9 + Math.sqrt(i / 120) * 52,
+    size: .65 + (i % 7) * .09, phase: (i * .61803398875) % 1
+  }));
+  let active = true, raf = 0, last = -1000;
+  function draw(now) {
+    if (!active) return;
+    raf = requestAnimationFrame(draw);
+    if (now - last < 32) return;
+    last = now;
+    ctx.clearRect(0, 0, 144, 144);
+    const t = reduced ? 0 : now * .00042;
+    for (const dot of dots) {
+      const a = dot.a + t * (1.15 - dot.r / 95);
+      const r = dot.r + (reduced ? 0 : Math.sin(t * 3 + dot.a) * 1.8);
+      const x = 72 + Math.cos(a) * r, y = 72 + Math.sin(a) * r;
+      ctx.fillStyle = `rgba(240,215,154,${.28 + dot.phase * .58})`;
+      ctx.beginPath(); ctx.arc(x, y, dot.size, 0, Math.PI * 2); ctx.fill();
+    }
+    if (reduced) { active = false; cancelAnimationFrame(raf); }
+  }
+  raf = requestAnimationFrame(draw);
+  window.stopBootParticles = () => { active = false; cancelAnimationFrame(raf); };
+})();
+</script>
+<script type="module" src="/gusha/app.js"></script>
+</body></html>

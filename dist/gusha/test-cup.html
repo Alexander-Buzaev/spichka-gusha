@@ -1,0 +1,88 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1430"><title>Кофейная гуща · чашка</title>
+<link rel="preload" href="/assets/cormorant-garamond.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:Cormorant;src:url(/assets/cormorant-garamond.woff2) format('woff2');font-weight:300 700;font-display:swap}
+:root{color-scheme:dark;--deep:#0b1430;--sand:#e8d2aa;--gold:#f0d79a;--muted:#7d88ab}
+*{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--deep);color:var(--sand);
+  font:400 12px/1.4 -apple-system,'SF Pro Text',Arial,sans-serif;
+  background-image:
+    radial-gradient(126% 80% at 50% 4%,#1c2a58 0%,#16204a 36%,#0d1533 68%,#080d22 100%),
+    radial-gradient(92% 34% at 50% 104%,rgba(196,140,64,.24) 0%,rgba(122,80,42,.09) 44%,rgba(10,17,40,0) 74%);
+  background-blend-mode:normal,screen}
+#sand{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:1}
+#screen{position:fixed;inset:0;z-index:2;touch-action:none}
+#hud{position:fixed;top:max(6px,env(safe-area-inset-top));left:10px;z-index:4;color:var(--muted);
+  font-variant-numeric:tabular-nums;letter-spacing:.06em;opacity:.75;pointer-events:none}
+#hud b{color:var(--gold);font-weight:400}
+#ui{position:fixed;left:0;right:0;bottom:0;z-index:4;padding:6px 8px max(6px,env(safe-area-inset-bottom));
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+#ui.off{display:none}
+button.qa{-webkit-appearance:none;appearance:none;border:1px solid rgba(232,210,170,.22);
+  background:rgba(12,19,46,.6);color:var(--muted);font:400 11px/1 -apple-system,Arial,sans-serif;
+  letter-spacing:.06em;padding:6px 9px;border-radius:999px;cursor:pointer}
+</style></head><body>
+<canvas id="sand"></canvas>
+<div id="screen"></div>
+<p id="hud"><b id="fps">—</b> fps · <span id="freeN">—</span> свободно · <span id="clk">0.0</span> с · <span id="sig">—</span></p>
+<div id="ui">
+  <button class="qa" data-act="pause">пауза</button>
+  <button class="qa" data-act="s1">+1 с</button>
+  <button class="qa" data-act="s5">+5 с</button>
+  <button class="qa" data-act="re">заново</button>
+  <button class="qa" data-act="hide">спрятать HUD</button>
+</div>
+<script type="module">
+import { createSand } from '/gusha/sand.js';
+import { mount, unmount } from '/gusha/screens/cup.js';
+
+const canvas = document.getElementById('sand');
+const sand = createSand(canvas, { count: 46000 });
+const root = document.getElementById('screen');
+const ctx = { sand, root, session: {}, go: name => { location.hash = '#' + name; } };
+await mount(ctx);
+
+const elFps = document.getElementById('fps'), elFree = document.getElementById('freeN');
+const elClk = document.getElementById('clk'), elSig = document.getElementById('sig');
+let last = performance.now(), acc = 0, frames = 0, hudT = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = (now - last) / 1000; last = now;
+  if (document.hidden || window.paused) return;
+  sand.tick(dt); sand.draw();
+  acc += dt; frames++; hudT += dt;
+  if (hudT > .5) {
+    elFps.textContent = (frames / acc).toFixed(0); elFree.textContent = sand.free;
+    elClk.textContent = ctx.cup.t.toFixed(1);
+    const s = ctx.cup.series(); elSig.textContent = s ? s.id + '/' + s.phase : '—';
+    acc = 0; frames = 0; hudT = 0;
+  }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) last = performance.now(); });
+requestAnimationFrame(frame);
+
+// QA: ровно N кадров по 1/60 — и песок, и таймлайн экрана идут одним шагом
+window.paused = false;
+window.sand = sand; window.ctx = ctx;
+window.step = (seconds, fps = 60) => {
+  const dt = 1 / fps, n = Math.round(seconds * fps);
+  for (let i = 0; i < n; i++) { ctx.cup.advance(dt); sand.tick(dt); }
+  sand.draw();
+};
+window.freeze = () => { window.paused = true; ctx.cup.paused = true; };
+window.hideHud = () => { document.getElementById('hud').style.display = 'none'; document.getElementById('ui').classList.add('off'); };
+window.remount = async () => { await unmount(ctx); root.innerHTML = ''; sand.clear(); await mount(ctx); };
+
+document.getElementById('ui').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const a = b.dataset.act;
+  if (a === 'pause') { const p = !window.paused; window.paused = p; ctx.cup.paused = p; b.textContent = p ? 'идти' : 'пауза'; }
+  else if (a === 's1') window.step(1);
+  else if (a === 's5') window.step(5);
+  else if (a === 're') window.remount();
+  else if (a === 'hide') window.hideHud();
+});
+</script>
+</body></html>

@@ -1,0 +1,88 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1430"><title>Кофейная гуща · экраны 1–2</title>
+<link rel="preload" href="/assets/cormorant-garamond.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:Cormorant;src:url(/assets/cormorant-garamond.woff2) format('woff2');font-weight:300 700;font-display:swap}
+:root{color-scheme:dark;--deep:#0b1430;--sand:#e8d2aa;--gold:#f0d79a;--muted:#7d88ab}
+*{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--deep);color:var(--sand);
+  font:400 12px/1.4 -apple-system,'SF Pro Text',Arial,sans-serif;
+  background-image:
+    radial-gradient(126% 80% at 50% 4%,#1c2a58 0%,#16204a 36%,#0d1533 68%,#080d22 100%),
+    radial-gradient(92% 34% at 50% 104%,rgba(196,140,64,.24) 0%,rgba(122,80,42,.09) 44%,rgba(10,17,40,0) 74%);
+  background-blend-mode:normal,screen}
+#sand{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:1}
+#screen{position:fixed;inset:0;z-index:3;pointer-events:none}
+#screen>*{pointer-events:auto}
+#hud{position:fixed;top:max(6px,env(safe-area-inset-top));left:10px;z-index:5;color:var(--muted);
+  font-variant-numeric:tabular-nums;letter-spacing:.06em;opacity:.7;pointer-events:none}
+#hud b{color:var(--gold);font-weight:400}
+#nav{position:fixed;top:max(6px,env(safe-area-inset-top));right:8px;z-index:5;display:flex;gap:5px}
+#nav button{-webkit-appearance:none;appearance:none;border:1px solid rgba(232,210,170,.2);
+  background:rgba(12,19,46,.5);color:var(--muted);font:400 10px/1 -apple-system,Arial,sans-serif;
+  letter-spacing:.08em;padding:5px 8px;border-radius:999px;cursor:pointer}
+#nav button.on{color:var(--sand);border-color:rgba(240,215,154,.5)}
+</style></head><body>
+<canvas id="sand"></canvas>
+<div id="screen"></div>
+<p id="hud"><b id="fps">—</b> fps · <span id="freeN">—</span> свободно · <span id="scr">—</span></p>
+<div id="nav"><button data-go="hello">hello</button><button data-go="lens">lens</button></div>
+<script type="module">
+import { createSand } from '/gusha/sand.js';
+
+const canvas = document.getElementById('sand');
+const params = new URLSearchParams(location.search);
+const sand = createSand(canvas, { count: +(params.get('count') || 46000) });
+
+const host = document.getElementById('screen');
+const ctx = { sand, root: host, session: {}, go };
+
+const MODULES = {
+  hello: () => import('./screens/hello.js'),
+  lens: () => import('./screens/lens.js')
+};
+
+let current = null, busy = null;
+async function go(name) {
+  if (!MODULES[name]) { console.warn('нет экрана', name); return; }
+  if (busy) await busy;
+  busy = (async () => {
+    if (current) { await current.mod.unmount(ctx); current = null; }
+    const mod = await MODULES[name]();
+    current = { name, mod };
+    document.getElementById('scr').textContent = name;
+    for (const b of document.querySelectorAll('#nav button')) b.classList.toggle('on', b.dataset.go === name);
+    location.hash = '#' + name;
+    await mod.mount(ctx);
+  })();
+  await busy;
+  busy = null;
+}
+addEventListener('hashchange', () => { const n = location.hash.replace('#', ''); if (n && (!current || current.name !== n)) go(n); });
+document.getElementById('nav').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (b) go(b.dataset.go);
+});
+
+const elFps = document.getElementById('fps'), elFree = document.getElementById('freeN');
+let last = performance.now(), acc = 0, frames = 0, hudT = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = (now - last) / 1000; last = now;
+  if (document.hidden || window.paused) return;
+  sand.tick(dt); sand.draw();
+  acc += dt; frames++; hudT += dt;
+  if (hudT > .5) { elFps.textContent = (frames / acc).toFixed(0); elFree.textContent = sand.free; acc = 0; frames = 0; hudT = 0; }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) last = performance.now(); });
+requestAnimationFrame(frame);
+
+// крюки для QA: ровно N кадров по 1/60, чтобы снимок брался в точный момент
+window.sand = sand; window.go = go; window.paused = false;
+window.step = (seconds, fps = 60) => { const dt = 1 / fps; for (let i = 0; i < Math.round(seconds * fps); i++) sand.tick(dt); sand.draw(); };
+window.tapCta = () => { const b = document.querySelector('.gh-cta,.gl-hit'); if (b) b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); };
+window.tapLens = i => { const b = document.querySelectorAll('.gl-hit')[i]; if (b) b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); };
+
+go(location.hash.replace('#', '') || 'hello');
+</script>
+</body></html>

@@ -1,0 +1,135 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1430"><title>Кофейная гуща · витрина песка</title>
+<link rel="preload" href="/assets/cormorant-garamond.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:Cormorant;src:url(/assets/cormorant-garamond.woff2) format('woff2');font-weight:300 700;font-display:swap}
+:root{color-scheme:dark;--deep:#0b1430;--sand:#e8d2aa;--gold:#f0d79a;--muted:#7d88ab}
+*{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--deep);color:var(--sand);
+  font:400 12px/1.4 -apple-system,'SF Pro Text',Arial,sans-serif;
+  background-image:
+    radial-gradient(126% 80% at 50% 4%,#1c2a58 0%,#16204a 36%,#0d1533 68%,#080d22 100%),
+    radial-gradient(92% 34% at 50% 104%,rgba(196,140,64,.24) 0%,rgba(122,80,42,.09) 44%,rgba(10,17,40,0) 74%);
+  background-blend-mode:normal,screen}
+#sand{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:1}
+#ui{position:fixed;left:0;right:0;bottom:0;z-index:3;padding:10px 8px max(10px,env(safe-area-inset-bottom));
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+  background:linear-gradient(to top,rgba(8,13,34,.86),rgba(8,13,34,0))}
+button{-webkit-appearance:none;appearance:none;border:1px solid rgba(232,210,170,.22);
+  background:rgba(12,19,46,.5);color:var(--muted);font:400 11px/1 -apple-system,Arial,sans-serif;
+  letter-spacing:.08em;padding:7px 10px;border-radius:999px;cursor:pointer}
+button:active,button.on{color:var(--sand);border-color:rgba(240,215,154,.5)}
+#hud{position:fixed;top:max(8px,env(safe-area-inset-top));left:10px;z-index:3;color:var(--muted);
+  font-variant-numeric:tabular-nums;letter-spacing:.06em;opacity:.8}
+#hud b{color:var(--gold);font-weight:400}
+#tip{position:fixed;top:max(8px,env(safe-area-inset-top));right:10px;z-index:3;color:var(--muted);opacity:.62}
+</style></head><body>
+<canvas id="sand"></canvas>
+<p id="hud"><b id="fps">—</b> fps · <span id="freeN">—</span> свободно</p>
+<p id="tip">касание рассыпает</p>
+<div id="ui">
+  <button data-act="text">текст ←→</button>
+  <button data-act="burst">burst</button>
+  <button data-act="vortex">vortex</button>
+  <button data-act="stream">stream</button>
+  <button data-act="strands">strands</button>
+  <button data-act="drip">drip</button>
+  <button data-act="wave-x">wave-x</button>
+  <button data-act="flow" id="flowBtn">поток: sky</button>
+  <button data-act="all">собрать всё</button>
+</div>
+<script type="module">
+import { createSand } from '/gusha/sand.js';
+
+const canvas = document.getElementById('sand');
+const sand = createSand(canvas, { count: 46000 });
+const W = () => sand.w, H = () => sand.h;
+
+// --- картинка для полутона: процедурный холст, без стоковых фото ---
+function moodCanvas() {
+  const c = document.createElement('canvas'); c.width = 240; c.height = 170;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, 240, 170);
+  const g = x.createRadialGradient(150, 60, 6, 130, 90, 130);
+  g.addColorStop(0, '#fff'); g.addColorStop(.32, '#cfcfcf'); g.addColorStop(.7, '#3a3a3a'); g.addColorStop(1, '#000');
+  x.fillStyle = g; x.fillRect(0, 0, 240, 170);
+  x.globalCompositeOperation = 'destination-out';         // полумесяц: вырез в светлом пятне
+  x.beginPath(); x.arc(178, 46, 44, 0, 7); x.fill();
+  x.globalCompositeOperation = 'source-over';
+  x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = 2;
+  x.beginPath(); x.moveTo(18, 150); x.bezierCurveTo(80, 120, 150, 152, 224, 116); x.stroke();
+  return c;
+}
+
+const L = { title: 62, sub: 134, img: 176, ring: 402, pill: 514, edge: 592, tabs: 656 };
+let flow = 'sky';
+
+async function build() {
+  await sand.ready;
+  const cx = W() / 2;
+  sand.text('title', 'Кофейная гуща', { x: cx, y: L.title, size: 42, weight: 500, align: 'center', arrive: 'wave-x', span: .72 });
+  sand.text('sub', 'живой песок · блик · рассыпания', { x: cx, y: L.sub, size: 18, align: 'center', arrive: 'wave-x', span: .5, delay: .26, tone: .82 });
+  sand.image('mood', moodCanvas(), { x: cx - 120, y: L.img, w: 240, h: 170, count: 8200, gamma: 1.2, arrive: 'flow', delay: .3 });
+  sand.shape('ring', 'ring', { x: cx, y: L.ring, r: 54, width: 7, arrive: 'burst', delay: .55, gold: .35 });
+  sand.shape('pill', 'pill', { x: cx, y: L.pill, w: 236, h: 54, arrive: 'wave-x', span: .45, delay: .7 });
+  sand.shape('edge', 'pillEdge', { x: cx, y: L.edge, w: 236, h: 54, thickness: 2.8, arrive: 'wave-x', span: .45, delay: .8 });
+  sand.text('edgeLbl', 'Карьера', { x: cx, y: L.edge, size: 22, align: 'center', baseline: 'middle', arrive: 'burst', delay: 1.0, tone: .95 });
+  sand.text('tabs', 'касание · вихрь · струя · пряди', { x: cx, y: L.tabs, size: 16, align: 'center', arrive: 'flow', delay: 1.1, tone: .72 });
+}
+build();
+
+// --- рассыпание по кнопкам: распускаем всё, потом собираем заново ---
+let busy = false;
+async function cycle(style) {
+  if (busy) return; busy = true;
+  for (const id of sand.groups) sand.release(id, { style });
+  await new Promise(r => setTimeout(r, style === 'drip' ? 1700 : 1300));
+  await build();
+  busy = false;
+}
+document.getElementById('ui').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const a = b.dataset.act;
+  if (a === 'text') {
+    if (sand.has('title')) {
+      sand.release('title', { style: 'wave-x' }); sand.release('sub', { style: 'wave-x' });
+      setTimeout(async () => {
+        await sand.ready;
+        sand.text('title', 'Кофейная гуща', { x: W() / 2, y: L.title, size: 42, weight: 500, align: 'center', arrive: 'wave-x', span: .72 });
+        sand.text('sub', 'живой песок · блик · рассыпания', { x: W() / 2, y: L.sub, size: 18, align: 'center', arrive: 'wave-x', span: .5, delay: .2, tone: .82 });
+      }, 1100);
+    }
+  } else if (a === 'flow') {
+    flow = flow === 'sky' ? 'calm' : 'sky'; sand.setFlow(flow);
+    b.textContent = 'поток: ' + flow;
+  } else if (a === 'all') { build(); }
+  else cycle(a);
+});
+
+// --- касание ---
+const local = e => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+canvas.addEventListener('pointerdown', e => { const [x, y] = local(e); sand.hit(x, y, 96, 470); });
+canvas.addEventListener('pointermove', e => { if (e.buttons) { const [x, y] = local(e); sand.hit(x, y, 62, 240); } });
+
+addEventListener('resize', () => { sand.resize(); build(); });
+
+// --- кадр ---
+const elFps = document.getElementById('fps'), elFree = document.getElementById('freeN');
+let last = performance.now(), acc = 0, frames = 0, hudT = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = (now - last) / 1000; last = now;
+  if (document.hidden || window.paused) return;
+  sand.tick(dt); sand.draw();
+  acc += dt; frames++; hudT += dt;
+  if (hudT > .5) { elFps.textContent = (frames / acc).toFixed(0); elFree.textContent = sand.free; acc = 0; frames = 0; hudT = 0; }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) last = performance.now(); });
+requestAnimationFrame(frame);
+window.sand = sand;
+// крюк для QA: ровно N кадров по 1/60 — снимок берётся в точный момент, а не «когда успеет»
+window.paused = false;
+window.step = (seconds, fps = 60) => { const dt = 1 / fps; for (let i = 0; i < Math.round(seconds * fps); i++) sand.tick(dt); sand.draw(); };
+</script>
+</body></html>
